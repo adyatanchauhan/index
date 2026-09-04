@@ -1,0 +1,5156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interactive Cp vs T Materials Database</title>
+
+<!-- Plotly for rendering -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+<!-- PyScript: runs real Python (Pyodide) in the browser -->
+<link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css" />
+<script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    --bg:#0a0d13;--panel:#12151c;--panel2:#171c26;--panel3:#1c2230;
+    --border:#262e3d;--border2:#323c50;
+    --accent:#2e86ab;--accent2:#4ecdc4;--accent3:#7c5cff;
+    --text:#e8edf5;--muted:#93a1b5;--muted2:#6b7688;
+    --radius:14px;--shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;color:var(--text);font-size:14px;
+    font-family:"Inter",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 12% -10%, rgba(46,134,171,.18), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(124,92,255,.14), transparent 55%),
+      var(--bg);
+    background-attachment:fixed;}
+  .mono{font-family:"JetBrains Mono",monospace;color:var(--accent2);}
+
+  /* Scrollbars */
+  *::-webkit-scrollbar{width:10px;height:10px;}
+  *::-webkit-scrollbar-track{background:transparent;}
+  *::-webkit-scrollbar-thumb{background:#2a3444;border-radius:20px;border:2px solid transparent;background-clip:content-box;}
+  *::-webkit-scrollbar-thumb:hover{background:#3a475c;background-clip:content-box;}
+
+  /* Header */
+  header{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+    padding:16px 24px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(20,24,33,.9),rgba(10,13,19,.75));
+    backdrop-filter:blur(10px);position:sticky;top:0;z-index:20;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .logo{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:24px;
+    background:linear-gradient(135deg,#2e86ab,#7c5cff);box-shadow:0 6px 20px rgba(124,92,255,.4);
+    animation:float 4s ease-in-out infinite;}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .main-header{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0;
+    background:linear-gradient(90deg,#6cc5ec,#4ecdc4,#a99bff);-webkit-background-clip:text;
+    background-clip:text;-webkit-text-fill-color:transparent;}
+  .sub-header{color:var(--muted);font-size:.82rem;margin:3px 0 0;}
+  .stat-bar{display:flex;gap:10px;flex-wrap:wrap;}
+  .stat-card{min-width:96px;padding:10px 16px;border-radius:12px;text-align:center;
+    background:linear-gradient(180deg,rgba(28,34,48,.8),rgba(18,21,28,.8));
+    border:1px solid var(--border);}
+  .stat-num{font-size:1.5rem;font-weight:800;line-height:1;
+    background:linear-gradient(90deg,#4ecdc4,#6cc5ec);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .stat-lbl{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);margin-top:4px;}
+
+  /* Layout */
+  .layout{display:flex;align-items:flex-start;}
+  aside{width:290px;min-width:290px;padding:16px;height:calc(100vh - 79px);overflow-y:auto;
+    border-right:1px solid var(--border);background:rgba(15,18,25,.55);}
+  main{flex:1;padding:18px 22px;height:calc(100vh - 79px);overflow-y:auto;}
+  .panel-cols{display:flex;gap:20px;align-items:flex-start;}
+  .mat-panel{width:330px;min-width:330px;}
+  .plot-area{flex:1;min-width:0;}
+
+  /* Cards */
+  .card{background:linear-gradient(180deg,rgba(23,28,38,.7),rgba(15,18,25,.7));
+    border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;
+    box-shadow:var(--shadow);}
+  .card h3,.card h4{margin-top:0;}
+  h3{margin:2px 0 12px;font-size:1.02rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+  h4{margin:14px 0 6px;font-size:.72rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.09em;font-weight:700;}
+  .sec-ico{font-size:1rem;}
+
+  label{display:block;margin:10px 0 4px;font-size:.76rem;color:var(--muted);font-weight:500;}
+  input[type=number],input[type=text],select{width:100%;padding:8px 10px;background:var(--panel2);
+    border:1px solid var(--border2);border-radius:9px;color:var(--text);font-size:.85rem;font-family:inherit;
+    transition:border-color .15s,box-shadow .15s;}
+  input[type=number]:focus,input[type=text]:focus,select:focus{outline:none;border-color:var(--accent2);
+    box-shadow:0 0 0 3px rgba(78,205,196,.15);}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:20px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#fff;border:3px solid var(--accent2);box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer;}
+  .row{display:flex;gap:8px;}.row>*{flex:1;}
+
+  /* Toggle switches */
+  .check{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:.82rem;cursor:pointer;}
+  .check input{position:absolute;opacity:0;width:0;height:0;}
+  .check .track{width:38px;height:22px;border-radius:20px;background:var(--panel3);border:1px solid var(--border2);
+    position:relative;transition:.2s;flex:none;}
+  .check .track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+    background:var(--muted);transition:.2s;}
+  .check input:checked + .track{background:linear-gradient(90deg,var(--accent),var(--accent2));border-color:transparent;}
+  .check input:checked + .track::after{transform:translateX(16px);background:#fff;}
+  .check label{margin:0;color:var(--text);cursor:pointer;}
+
+  button{background:linear-gradient(135deg,var(--accent),#2b6f8f);color:#fff;border:none;border-radius:9px;
+    padding:9px 12px;cursor:pointer;font-size:.82rem;font-weight:600;font-family:inherit;transition:transform .1s,filter .15s,box-shadow .15s;}
+  button:hover{filter:brightness(1.12);box-shadow:0 4px 14px rgba(46,134,171,.35);}
+  button:active{transform:translateY(1px);}
+  button.secondary{background:var(--panel2);border:1px solid var(--border2);color:var(--text);}
+  button.secondary:hover{border-color:var(--accent2);box-shadow:none;}
+
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px;}
+  .chip{background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:20px;
+    padding:6px 12px;font-size:.76rem;font-weight:600;cursor:pointer;transition:.15s;}
+  .chip:hover{border-color:var(--accent2);background:var(--panel3);color:var(--accent2);transform:translateY(-1px);}
+
+  hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+
+  .mat-list{border:1px solid var(--border);border-radius:12px;max-height:440px;overflow-y:auto;background:rgba(13,16,22,.5);}
+  .mat-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(38,46,61,.5);
+    cursor:pointer;font-size:.82rem;transition:background .12s;border-left:3px solid transparent;}
+  .mat-item:hover{background:var(--panel2);}
+  .mat-item.selected{background:rgba(78,205,196,.08);border-left-color:var(--accent2);}
+  .mat-item input{margin-top:2px;accent-color:var(--accent2);width:16px;height:16px;flex:none;}
+  .mi-name{font-weight:500;line-height:1.3;}
+  .mat-item .meta{color:var(--muted);font-size:.72rem;margin-top:3px;display:flex;align-items:center;gap:6px;}
+  .cat-dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 6px currentColor;}
+  .caption{color:var(--muted);font-size:.78rem;margin:8px 0;}
+
+  .plot-card{background:linear-gradient(180deg,#12151c,#0b0e14);border:1px solid var(--border2);
+    border-radius:var(--radius);padding:6px;box-shadow:var(--shadow);margin-bottom:14px;position:relative;overflow:hidden;}
+  .plot-card::before{content:"";position:absolute;inset:0;padding:1px;border-radius:var(--radius);
+    background:linear-gradient(120deg,rgba(78,205,196,.5),transparent 40%,transparent 60%,rgba(124,92,255,.5));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;}
+  .plot-hero{padding:10px 14px 4px;font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:8px;}
+
+  .tabs{display:flex;gap:6px;margin:18px 0 14px;flex-wrap:wrap;}
+  .tab{padding:9px 18px;cursor:pointer;color:var(--muted);border-radius:20px;font-weight:600;font-size:.85rem;
+    border:1px solid transparent;transition:.15s;}
+  .tab:hover{color:var(--text);background:var(--panel2);}
+  .tab.active{color:#06222a;background:linear-gradient(135deg,var(--accent2),#6cc5ec);}
+  .tab-content{display:none;animation:fade .25s ease;}
+  .tab-content.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+  th{color:var(--accent2);position:sticky;top:0;background:#0f131a;font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.05em;z-index:1;}
+  tbody tr{transition:background .12s;}
+  tbody tr:hover{background:rgba(78,205,196,.05);}
+  .table-wrap{max-height:460px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;}
+  a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
+
+  .warn{background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.5);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:.8rem;color:#ffe08a;}
+  .info{background:rgba(46,134,171,.1);border:1px solid rgba(46,134,171,.5);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:.8rem;color:#bfe2f5;}
+  details{margin:8px 0;border:1px solid var(--border);border-radius:10px;padding:4px 12px;background:rgba(18,21,28,.5);}
+  summary{cursor:pointer;padding:7px 0;font-weight:600;}
+  .source-card{background:rgba(18,21,28,.6);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:10px;transition:.15s;}
+  .source-card:hover{border-color:var(--accent2);transform:translateX(3px);}
+  .dl-btns{display:flex;gap:10px;margin:12px 0;flex-wrap:wrap;}
+
+  .inspect-box{background:rgba(18,21,28,.5);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:8px 0;}
+  .footer{margin-top:26px;padding:16px 0;border-top:1px solid var(--border);text-align:center;color:var(--muted2);font-size:.76rem;}
+
+  /* Loader */
+  .loader-overlay{position:fixed;inset:0;display:grid;place-items:center;z-index:50;
+    background:radial-gradient(800px 400px at 50% 30%,rgba(46,134,171,.15),transparent),var(--bg);}
+  .loader-card{text-align:center;max-width:420px;padding:30px;}
+  .spinner{width:64px;height:64px;margin:0 auto 22px;border-radius:50%;
+    background:conic-gradient(from 0deg,var(--accent2),var(--accent3),var(--accent),var(--accent2));
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 0);
+    mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 0);animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loader-title{font-size:1.15rem;font-weight:700;margin-bottom:8px;}
+  .loader-sub{color:var(--muted);font-size:.85rem;margin-bottom:18px;}
+  .loader-bar{height:6px;border-radius:20px;background:var(--panel2);overflow:hidden;}
+  .loader-bar span{display:block;height:100%;width:40%;border-radius:20px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));animation:slide 1.3s ease-in-out infinite;}
+  @keyframes slide{0%{margin-left:-40%}100%{margin-left:100%}}
+
+  @media(max-width:1100px){
+    .panel-cols{flex-direction:column;}
+    .mat-panel{width:100%;min-width:0;}
+    aside{width:240px;min-width:240px;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">🔥</div>
+    <div>
+      <h1 class="main-header">Interactive C<sub>p</sub> vs T Database</h1>
+      <p class="sub-header" id="subHeader">Loading Python runtime (Pyodide)…</p>
+    </div>
+  </div>
+  <div class="stat-bar">
+    <div class="stat-card"><div class="stat-num" id="statMaterials">—</div><div class="stat-lbl">Materials</div></div>
+    <div class="stat-card"><div class="stat-num" id="statCategories">—</div><div class="stat-lbl">Categories</div></div>
+    <div class="stat-card"><div class="stat-num" id="statSelected">0</div><div class="stat-lbl">Selected</div></div>
+    <div class="stat-card"><div class="stat-num">3</div><div class="stat-lbl">Cp Models</div></div>
+  </div>
+</header>
+
+<div id="status" class="loader-overlay">
+  <div class="loader-card">
+    <div class="spinner"></div>
+    <div class="loader-title">Booting Python in your browser…</div>
+    <div class="loader-sub">Loading the Pyodide runtime and NumPy so the real thermodynamic engine runs client-side. First load may take a few seconds.</div>
+    <div class="loader-bar"><span></span></div>
+  </div>
+</div>
+
+<div class="layout" id="appRoot" style="display:none">
+  <aside>
+    <div class="card">
+      <h3><span class="sec-ico">⚙️</span> Plot Settings</h3>
+      <label>Temperature unit</label>
+      <select id="unit"><option value="K">Kelvin (K)</option><option value="C">Celsius (°C)</option></select>
+      <div class="row">
+        <div><label>T minimum</label><input type="number" id="tmin" value="298" step="10" /></div>
+        <div><label>T maximum</label><input type="number" id="tmax" value="773" step="10" /></div>
+      </div>
+      <label>Plot points: <span class="mono" id="nptsVal">200</span></label>
+      <input type="range" id="npoints" min="50" max="500" value="200" step="10" />
+      <label class="check"><input type="checkbox" id="showPhase" checked /><span class="track"></span><span>Show phase transitions</span></label>
+      <label class="check"><input type="checkbox" id="showMolar" /><span class="track"></span><span>Plot molar Cp (J/mol·K)</span></label>
+    </div>
+
+    <div class="card">
+      <h4>Curve display</h4>
+      <label>Y-axis mode</label>
+      <select id="displayMode">
+        <option value="absolute">Absolute Cp</option>
+        <option value="normalized" selected>Normalized (Cp / Cp@300K)</option>
+        <option value="delta">ΔCp from T min</option>
+      </select>
+      <label class="check"><input type="checkbox" id="logY" /><span class="track"></span><span>Log Y-axis (absolute only)</span></label>
+      <label class="check"><input type="checkbox" id="colorCat" /><span class="track"></span><span>Color by category</span></label>
+      <hr />
+      <label>Rank at T =</label>
+      <input type="number" id="rankTemp" value="300" step="10" />
+    </div>
+
+    <div class="card">
+      <h4>Data Sources</h4>
+      <div id="sidebarSources" class="caption"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="panel-cols">
+      <div class="mat-panel">
+        <div class="card">
+          <h3><span class="sec-ico">🧪</span> Materials</h3>
+          <div class="presets">
+            <button class="chip" id="presetMetals">Metals</button>
+            <button class="chip" id="presetGases">Gases</button>
+            <button class="chip" id="presetCeramics">Ceramics</button>
+            <button class="chip" id="presetPolymers">Polymers</button>
+            <button class="chip" id="presetRandom">🎲 Random 5</button>
+            <button class="chip" id="presetReset">↺ Reset</button>
+          </div>
+          <label>Category</label><select id="catFilter"></select>
+          <label>Search</label><input type="text" id="search" placeholder="Name, formula, category…" />
+          <div class="row" style="margin-top:12px">
+            <button id="selAll" class="secondary">Select all</button>
+            <button id="clearSel" class="secondary">Clear</button>
+          </div>
+          <div class="caption" id="selCaption"></div>
+          <div class="mat-list" id="matList"></div>
+        </div>
+      </div>
+      <div class="plot-area">
+        <h3><span class="sec-ico">📈</span> C<sub>p</sub> – T Plot</h3>
+        <div class="plot-card">
+          <div class="plot-hero" id="plotHero"></div>
+          <div id="plot" style="width:100%;height:560px;"></div>
+        </div>
+        <div class="dl-btns">
+          <button id="dlPng">⬇ Download plot (PNG)</button>
+          <button id="dlCsv" class="secondary">⬇ Download data (CSV)</button>
+        </div>
+        <div id="plotWarnings"></div>
+        <div class="inspect-box">
+          <label>🔍 Inspect Cp at temperature: <span class="mono" id="inspectVal"></span></label>
+          <input type="range" id="inspectT" min="0" max="100" value="50" step="5" />
+        </div>
+        <div class="table-wrap" id="inspectorWrap"></div>
+        <div class="tabs">
+          <div class="tab active" data-tab="ranking">🏆 Ranking</div>
+          <div class="tab" data-tab="browse">📚 Browse</div>
+          <div class="tab" data-tab="sources">🔗 Data Sources</div>
+        </div>
+        <div class="tab-content active" id="tab-ranking"></div>
+        <div class="tab-content" id="tab-browse"></div>
+        <div class="tab-content" id="tab-sources"></div>
+        <div class="footer">College Project · Interactive C<sub>p</sub>–T Explorer · Real Python thermodynamics via <strong>PyScript + Pyodide</strong>, charts by <strong>Plotly</strong> · Data: NIST · MatWeb · ASM</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="application/json" id="materials-data">
+[
+  {
+    "id": "mat_001",
+    "name": "Hydrogen",
+    "formula": "H₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      33.066,
+      -11.363,
+      11.432,
+      -2.772,
+      -0.158
+    ],
+    "molar_mass_g_mol": 2.016,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_002",
+    "name": "Oxygen",
+    "formula": "O₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      31.322,
+      -20.235,
+      57.866,
+      -36.506,
+      -0.007
+    ],
+    "molar_mass_g_mol": 31.998,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_003",
+    "name": "Nitrogen",
+    "formula": "N₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      28.986,
+      1.853,
+      -0.01,
+      -0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 28.014,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_004",
+    "name": "Carbon Dioxide",
+    "formula": "CO₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      24.997,
+      55.186,
+      -33.691,
+      7.948,
+      -0.136
+    ],
+    "molar_mass_g_mol": 44.01,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_005",
+    "name": "Water Vapor",
+    "formula": "H₂O(g)",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      32.244,
+      1.92,
+      1.055,
+      -3.596,
+      0.0
+    ],
+    "molar_mass_g_mol": 18.015,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_006",
+    "name": "Methane",
+    "formula": "CH₄",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      -0.703,
+      108.477,
+      -42.521,
+      5.862,
+      0.678
+    ],
+    "molar_mass_g_mol": 16.043,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_007",
+    "name": "Graphite",
+    "formula": "C",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      2.553,
+      0.263,
+      -0.0,
+      0.0,
+      -0.0
+    ],
+    "molar_mass_g_mol": 12.011,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_008",
+    "name": "Iron (alpha)",
+    "formula": "Fe",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      18.584,
+      7.895,
+      -0.553,
+      0.0,
+      -0.0
+    ],
+    "molar_mass_g_mol": 55.845,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 1184,
+    "phase_transition_label": "α→γ phase transition"
+  },
+  {
+    "id": "mat_009",
+    "name": "Copper",
+    "formula": "Cu",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.531,
+      8.036,
+      -0.45,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 63.546,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 1358,
+    "phase_transition_label": "Melting point"
+  },
+  {
+    "id": "mat_010",
+    "name": "Aluminum",
+    "formula": "Al",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.765,
+      5.81,
+      -0.28,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 26.982,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 933,
+    "phase_transition_label": "Melting point"
+  },
+  {
+    "id": "mat_011",
+    "name": "Silicon",
+    "formula": "Si",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.789,
+      2.33,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 28.086,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 1687,
+    "phase_transition_label": "Melting point"
+  },
+  {
+    "id": "mat_012",
+    "name": "Titanium",
+    "formula": "Ti",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 47.867,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 1941,
+    "phase_transition_label": "Melting point"
+  },
+  {
+    "id": "mat_013",
+    "name": "Nickel",
+    "formula": "Ni",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.887,
+      9.041,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 58.693,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 1728,
+    "phase_transition_label": "Melting point"
+  },
+  {
+    "id": "mat_014",
+    "name": "Zinc",
+    "formula": "Zn",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      5.103,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 65.38,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_015",
+    "name": "Lead",
+    "formula": "Pb",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      23.643,
+      4.54,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 207.2,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_016",
+    "name": "Silver",
+    "formula": "Ag",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.586,
+      4.003,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 107.87,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_017",
+    "name": "Gold",
+    "formula": "Au",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      23.311,
+      5.334,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 196.97,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_018",
+    "name": "Magnesium",
+    "formula": "Mg",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 24.305,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_019",
+    "name": "Chromium",
+    "formula": "Cr",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      18.413,
+      12.777,
+      -2.873,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 51.996,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_020",
+    "name": "Manganese",
+    "formula": "Mn",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      24.061,
+      8.443,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 54.938,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_021",
+    "name": "Molybdenum",
+    "formula": "Mo",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.884,
+      6.443,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 95.95,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_022",
+    "name": "Tungsten",
+    "formula": "W",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.867,
+      8.068,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 183.84,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_023",
+    "name": "Vanadium",
+    "formula": "V",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.591,
+      7.467,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 50.942,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_024",
+    "name": "Cobalt",
+    "formula": "Co",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.811,
+      8.947,
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 58.933,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_025",
+    "name": "Tin",
+    "formula": "Sn",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.519,
+      4.823,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 118.71,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_026",
+    "name": "Platinum",
+    "formula": "Pt",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.884,
+      2.297,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 195.08,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_027",
+    "name": "Palladium",
+    "formula": "Pd",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.884,
+      2.297,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 106.42,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_028",
+    "name": "Calcium",
+    "formula": "Ca",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 40.078,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_029",
+    "name": "Sodium",
+    "formula": "Na",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 22.99,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_030",
+    "name": "Potassium",
+    "formula": "K",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 39.098,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_031",
+    "name": "Lithium",
+    "formula": "Li",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 6.941,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_032",
+    "name": "Barium",
+    "formula": "Ba",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 137.33,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_033",
+    "name": "Strontium",
+    "formula": "Sr",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 87.62,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_034",
+    "name": "Beryllium",
+    "formula": "Be",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 9.012,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_035",
+    "name": "Scandium",
+    "formula": "Sc",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 44.956,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_036",
+    "name": "Yttrium",
+    "formula": "Y",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 88.906,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_037",
+    "name": "Zirconium",
+    "formula": "Zr",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 91.224,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_038",
+    "name": "Niobium",
+    "formula": "Nb",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 92.906,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_039",
+    "name": "Tantalum",
+    "formula": "Ta",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 180.95,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_040",
+    "name": "Hafnium",
+    "formula": "Hf",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 178.49,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_041",
+    "name": "Rhenium",
+    "formula": "Re",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 186.21,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_042",
+    "name": "Osmium",
+    "formula": "Os",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 190.23,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_043",
+    "name": "Iridium",
+    "formula": "Ir",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 192.22,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_044",
+    "name": "Rhodium",
+    "formula": "Rh",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 102.91,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_045",
+    "name": "Ruthenium",
+    "formula": "Ru",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      22.132,
+      8.835,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 101.07,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_046",
+    "name": "Cadmium",
+    "formula": "Cd",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      5.103,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 112.41,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_047",
+    "name": "Mercury",
+    "formula": "Hg",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 200.59,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_048",
+    "name": "Gallium",
+    "formula": "Ga",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 69.723,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_049",
+    "name": "Indium",
+    "formula": "In",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 114.82,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_050",
+    "name": "Thallium",
+    "formula": "Tl",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.786,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 204.38,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_051",
+    "name": "Bismuth",
+    "formula": "Bi",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      23.643,
+      4.54,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 208.98,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_052",
+    "name": "Antimony",
+    "formula": "Sb",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.519,
+      4.823,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 121.76,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_053",
+    "name": "Arsenic",
+    "formula": "As",
+    "category": "Metals and alloys",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.519,
+      4.823,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 74.922,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_054",
+    "name": "Selenium",
+    "formula": "Se",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.519,
+      4.823,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 78.971,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_055",
+    "name": "Tellurium",
+    "formula": "Te",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.519,
+      4.823,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 127.6,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_056",
+    "name": "Germanium (element)",
+    "formula": "Ge",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.789,
+      2.33,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 72.63,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_057",
+    "name": "Boron",
+    "formula": "B",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.789,
+      2.33,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 10.811,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_058",
+    "name": "Diamond",
+    "formula": "C",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      2.553,
+      0.263,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 12.011,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_059",
+    "name": "Phosphorus (white)",
+    "formula": "P",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.789,
+      2.33,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 30.974,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_060",
+    "name": "Sulfur",
+    "formula": "S",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.519,
+      4.823,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 32.066,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_061",
+    "name": "Chlorine",
+    "formula": "Cl₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      33.949,
+      -8.583,
+      28.074,
+      -17.536,
+      -0.25
+    ],
+    "molar_mass_g_mol": 70.906,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_062",
+    "name": "Fluorine",
+    "formula": "F₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      33.949,
+      -8.583,
+      28.074,
+      -17.536,
+      -0.25
+    ],
+    "molar_mass_g_mol": 37.997,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_063",
+    "name": "Bromine",
+    "formula": "Br₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      33.949,
+      -8.583,
+      28.074,
+      -17.536,
+      -0.25
+    ],
+    "molar_mass_g_mol": 159.81,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_064",
+    "name": "Iodine",
+    "formula": "I₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      33.949,
+      -8.583,
+      28.074,
+      -17.536,
+      -0.25
+    ],
+    "molar_mass_g_mol": 253.81,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_065",
+    "name": "Hydrogen Chloride",
+    "formula": "HCl",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      32.123,
+      -13.458,
+      20.524,
+      -6.147,
+      -0.079
+    ],
+    "molar_mass_g_mol": 36.461,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_066",
+    "name": "Hydrogen Fluoride",
+    "formula": "HF",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      32.123,
+      -13.458,
+      20.524,
+      -6.147,
+      -0.079
+    ],
+    "molar_mass_g_mol": 20.006,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_067",
+    "name": "Ammonia",
+    "formula": "NH₃",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      19.995,
+      49.771,
+      -15.375,
+      1.921,
+      0.189
+    ],
+    "molar_mass_g_mol": 17.031,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_068",
+    "name": "Nitric Oxide",
+    "formula": "NO",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      23.834,
+      12.588,
+      -1.031,
+      -0.052,
+      -0.04
+    ],
+    "molar_mass_g_mol": 30.006,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_069",
+    "name": "Nitrogen Dioxide",
+    "formula": "NO₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      25.234,
+      32.268,
+      -11.631,
+      1.233,
+      0.268
+    ],
+    "molar_mass_g_mol": 46.006,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_070",
+    "name": "Sulfur Dioxide",
+    "formula": "SO₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.43,
+      74.35,
+      -57.752,
+      16.355,
+      0.086
+    ],
+    "molar_mass_g_mol": 64.066,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_071",
+    "name": "Hydrogen Sulfide",
+    "formula": "H₂S",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      26.038,
+      18.502,
+      3.056,
+      -3.298,
+      0.0
+    ],
+    "molar_mass_g_mol": 34.082,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_072",
+    "name": "Carbon Monoxide",
+    "formula": "CO",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      25.567,
+      6.096,
+      -4.054,
+      0.873,
+      0.0
+    ],
+    "molar_mass_g_mol": 28.01,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_073",
+    "name": "Ethane",
+    "formula": "C₂H₆",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      -4.224,
+      306.361,
+      -168.27,
+      35.98,
+      0.0
+    ],
+    "molar_mass_g_mol": 30.07,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_074",
+    "name": "Ethylene",
+    "formula": "C₂H₄",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      -6.387,
+      205.607,
+      -102.053,
+      17.134,
+      0.0
+    ],
+    "molar_mass_g_mol": 28.054,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_075",
+    "name": "Acetylene",
+    "formula": "C₂H₂",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      40.151,
+      8.598,
+      -8.284,
+      2.834,
+      0.0
+    ],
+    "molar_mass_g_mol": 26.038,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_076",
+    "name": "Propane",
+    "formula": "C₃H₈",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      -7.524,
+      479.453,
+      -301.271,
+      74.54,
+      0.0
+    ],
+    "molar_mass_g_mol": 44.097,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_077",
+    "name": "Propylene",
+    "formula": "C₃H₆",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      -3.631,
+      270.944,
+      -149.967,
+      31.787,
+      0.0
+    ],
+    "molar_mass_g_mol": 42.081,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_078",
+    "name": "Butane",
+    "formula": "C₄H₁₀",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      -9.525,
+      644.75,
+      -424.216,
+      110.27,
+      0.0
+    ],
+    "molar_mass_g_mol": 58.123,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_079",
+    "name": "Methanol",
+    "formula": "CH₃OH",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      21.271,
+      70.597,
+      -41.826,
+      9.673,
+      0.0
+    ],
+    "molar_mass_g_mol": 32.042,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_080",
+    "name": "Ethanol",
+    "formula": "C₂H₅OH",
+    "category": "Gases",
+    "equation_type": "shomate",
+    "coefficients": [
+      20.691,
+      109.27,
+      -68.58,
+      16.44,
+      0.0
+    ],
+    "molar_mass_g_mol": 46.069,
+    "t_min_k": 298,
+    "t_max_k": 1000,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_081",
+    "name": "Water (liquid)",
+    "formula": "H₂O(l)",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      -203.606,
+      1523.29,
+      -3196.413,
+      2474.455,
+      3.855
+    ],
+    "molar_mass_g_mol": 18.015,
+    "t_min_k": 298,
+    "t_max_k": 500,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)",
+    "phase_transition_k": 373,
+    "phase_transition_label": "Boiling point"
+  },
+  {
+    "id": "mat_082",
+    "name": "Sodium Chloride",
+    "formula": "NaCl",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 58.443,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_083",
+    "name": "Potassium Chloride",
+    "formula": "KCl",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 74.551,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_084",
+    "name": "Calcium Oxide",
+    "formula": "CaO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 56.077,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_085",
+    "name": "Magnesium Oxide",
+    "formula": "MgO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 40.304,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_086",
+    "name": "Aluminum Oxide",
+    "formula": "Al₂O₃",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 101.96,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_087",
+    "name": "Quartz",
+    "formula": "SiO₂",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 60.084,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_088",
+    "name": "Titanium Dioxide",
+    "formula": "TiO₂",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 79.866,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_089",
+    "name": "Iron(III) Oxide",
+    "formula": "Fe₂O₃",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 159.69,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_090",
+    "name": "Magnetite",
+    "formula": "Fe₃O₄",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 231.53,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_091",
+    "name": "Copper(II) Oxide",
+    "formula": "CuO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 79.545,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_092",
+    "name": "Copper(I) Oxide",
+    "formula": "Cu₂O",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 143.09,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_093",
+    "name": "Zinc Oxide",
+    "formula": "ZnO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 81.38,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_094",
+    "name": "Nickel Oxide",
+    "formula": "NiO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 74.693,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_095",
+    "name": "Chromium(III) Oxide",
+    "formula": "Cr₂O₃",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 151.99,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_096",
+    "name": "Manganese(II) Oxide",
+    "formula": "MnO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 70.937,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_097",
+    "name": "Manganese Dioxide",
+    "formula": "MnO₂",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 86.937,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_098",
+    "name": "Lead(II) Oxide",
+    "formula": "PbO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 223.2,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_099",
+    "name": "Tin(IV) Oxide",
+    "formula": "SnO₂",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 150.71,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_100",
+    "name": "Barium Oxide",
+    "formula": "BaO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 153.33,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_101",
+    "name": "Strontium Oxide",
+    "formula": "SrO",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 103.62,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_102",
+    "name": "Lithium Oxide",
+    "formula": "Li₂O",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 29.881,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_103",
+    "name": "Sodium Oxide",
+    "formula": "Na₂O",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 61.979,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_104",
+    "name": "Potassium Oxide",
+    "formula": "K₂O",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 94.196,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_105",
+    "name": "Calcium Carbonate",
+    "formula": "CaCO₃",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 100.09,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_106",
+    "name": "Sodium Carbonate",
+    "formula": "Na₂CO₃",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 105.99,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_107",
+    "name": "Potassium Carbonate",
+    "formula": "K₂CO₃",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 138.21,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_108",
+    "name": "Calcium Sulfate",
+    "formula": "CaSO₄",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 136.14,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_109",
+    "name": "Barium Sulfate",
+    "formula": "BaSO₄",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 233.39,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_110",
+    "name": "Aluminum Chloride",
+    "formula": "AlCl₃",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 133.34,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_111",
+    "name": "Iron(III) Chloride",
+    "formula": "FeCl₃",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 162.2,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_112",
+    "name": "Copper Sulfate",
+    "formula": "CuSO₄",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 159.61,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_113",
+    "name": "Sulfuric Acid",
+    "formula": "H₂SO₄",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 98.079,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_114",
+    "name": "Nitric Acid",
+    "formula": "HNO₃",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 63.012,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_115",
+    "name": "Phosphoric Acid",
+    "formula": "H₃PO₄",
+    "category": "Other",
+    "equation_type": "shomate",
+    "coefficients": [
+      50.723,
+      6.67,
+      -3.059,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": 97.995,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_116",
+    "name": "Silicon Carbide",
+    "formula": "SiC",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 40.096,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_117",
+    "name": "Boron Nitride",
+    "formula": "BN",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 24.818,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_118",
+    "name": "Titanium Carbide",
+    "formula": "TiC",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 59.878,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_119",
+    "name": "Tungsten Carbide",
+    "formula": "WC",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 195.85,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_120",
+    "name": "Zirconium Carbide",
+    "formula": "ZrC",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 103.23,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_121",
+    "name": "Titanium Nitride",
+    "formula": "TiN",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 61.874,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_122",
+    "name": "Silicon Nitride",
+    "formula": "Si₃N₄",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 140.28,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_123",
+    "name": "Aluminum Nitride",
+    "formula": "AlN",
+    "category": "Ceramics",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 40.988,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_124",
+    "name": "Gallium Arsenide (compound)",
+    "formula": "GaAs",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 144.65,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_125",
+    "name": "Indium Phosphide (compound)",
+    "formula": "InP",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 145.79,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_126",
+    "name": "Gallium Nitride (compound)",
+    "formula": "GaN",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 83.73,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_127",
+    "name": "Silicon Germanium (compound)",
+    "formula": "SiGe",
+    "category": "Semiconductors",
+    "equation_type": "shomate",
+    "coefficients": [
+      46.344,
+      47.298,
+      -33.685,
+      7.982,
+      -0.517
+    ],
+    "molar_mass_g_mol": 53.358,
+    "t_min_k": 298,
+    "t_max_k": 700,
+    "source": "NIST Chemistry WebBook (webbook.nist.gov)"
+  },
+  {
+    "id": "mat_128",
+    "name": "Stainless Steel 304",
+    "formula": "Fe-Cr-Ni",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      450.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb / ASM Handbook"
+  },
+  {
+    "id": "mat_129",
+    "name": "Stainless Steel 316",
+    "formula": "Fe-Cr-Ni-Mo",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      460.0,
+      0.19,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb / ASM Handbook"
+  },
+  {
+    "id": "mat_130",
+    "name": "Stainless Steel 410",
+    "formula": "Fe-Cr",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      460.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_131",
+    "name": "Carbon Steel AISI 1010",
+    "formula": "Fe-C",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      486.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "ASM Handbook"
+  },
+  {
+    "id": "mat_132",
+    "name": "Carbon Steel AISI 1045",
+    "formula": "Fe-C",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      486.0,
+      0.19,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "ASM Handbook"
+  },
+  {
+    "id": "mat_133",
+    "name": "Tool Steel H13",
+    "formula": "Fe-Cr-Mo-V",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      460.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_134",
+    "name": "Cast Iron Gray",
+    "formula": "Fe-C-Si",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      460.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "ASM Handbook"
+  },
+  {
+    "id": "mat_135",
+    "name": "Cast Iron Ductile",
+    "formula": "Fe-C-Si-Mg",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      460.0,
+      0.14,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "ASM Handbook"
+  },
+  {
+    "id": "mat_136",
+    "name": "Brass C26000",
+    "formula": "Cu-Zn",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      380.0,
+      0.12,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_137",
+    "name": "Bronze C93200",
+    "formula": "Cu-Sn-Pb",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      377.0,
+      0.11,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_138",
+    "name": "Aluminum Alloy 2024-T3",
+    "formula": "Al-Cu-Mg",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      875.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_139",
+    "name": "Aluminum Alloy 6061-T6",
+    "formula": "Al-Mg-Si",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      896.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_140",
+    "name": "Aluminum Alloy 7075-T6",
+    "formula": "Al-Zn-Mg-Cu",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      960.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_141",
+    "name": "Titanium Alloy Ti-6Al-4V",
+    "formula": "Ti-Al-V",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      526.0,
+      0.14,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb / ASM"
+  },
+  {
+    "id": "mat_142",
+    "name": "Titanium Alloy CP Grade 2",
+    "formula": "Ti",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      522.0,
+      0.13,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_143",
+    "name": "Nickel Alloy Inconel 625",
+    "formula": "Ni-Cr-Mo",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      410.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_144",
+    "name": "Nickel Alloy Inconel 718",
+    "formula": "Ni-Cr-Fe-Nb",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      435.0,
+      0.17,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_145",
+    "name": "Nickel Alloy Monel 400",
+    "formula": "Ni-Cu",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      427.0,
+      0.16,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_146",
+    "name": "Magnesium Alloy AZ31B",
+    "formula": "Mg-Al-Zn",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1024.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 673,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_147",
+    "name": "Magnesium Alloy AZ91D",
+    "formula": "Mg-Al-Zn",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1050.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 673,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_148",
+    "name": "Zinc Alloy ZA-12",
+    "formula": "Zn-Al-Cu",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      420.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 573,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_149",
+    "name": "Lead Alloy",
+    "formula": "Pb-Sb",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      129.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 600,
+    "source": "ASM Handbook"
+  },
+  {
+    "id": "mat_150",
+    "name": "Tungsten Alloy W-Ni-Fe",
+    "formula": "W-Ni-Fe",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      134.0,
+      0.02,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_151",
+    "name": "Cobalt Alloy Haynes 25",
+    "formula": "Co-Cr-W",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      372.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_152",
+    "name": "Nichrome 80",
+    "formula": "Ni-Cr",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      450.0,
+      0.12,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_153",
+    "name": "Constantan",
+    "formula": "Cu-Ni",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      390.0,
+      0.1,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_154",
+    "name": "Molybdenum Alloy TZM",
+    "formula": "Mo-Ti-Zr",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      251.0,
+      0.03,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_155",
+    "name": "Hastelloy C-276",
+    "formula": "Ni-Mo-Cr",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      427.0,
+      0.16,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_156",
+    "name": "Superalloy Rene 41",
+    "formula": "Ni-Co-Cr",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      420.0,
+      0.17,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_157",
+    "name": "Beryllium Copper C17200",
+    "formula": "Cu-Be",
+    "category": "Metals and alloys",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      420.0,
+      0.08,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_158",
+    "name": "Alumina 99.5%",
+    "formula": "Al₂O₃",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      775.0,
+      0.25,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb / AZoM"
+  },
+  {
+    "id": "mat_159",
+    "name": "Alumina 96%",
+    "formula": "Al₂O₃",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      790.0,
+      0.24,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_160",
+    "name": "Zirconia TZP",
+    "formula": "ZrO₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      490.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_161",
+    "name": "Zirconia PSZ",
+    "formula": "ZrO₂-MgO",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      500.0,
+      0.14,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_162",
+    "name": "Silicon Carbide Sintered",
+    "formula": "SiC",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      670.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb / AZoM"
+  },
+  {
+    "id": "mat_163",
+    "name": "Silicon Nitride SN282",
+    "formula": "Si₃N₄",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      700.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_164",
+    "name": "Boron Carbide",
+    "formula": "B₄C",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      950.0,
+      0.1,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_165",
+    "name": "Titanium Diboride",
+    "formula": "TiB₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      560.0,
+      0.12,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_166",
+    "name": "Tungsten Carbide WC",
+    "formula": "WC",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      210.0,
+      0.05,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_167",
+    "name": "Mullite",
+    "formula": "3Al₂O₃·2SiO₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      830.0,
+      0.22,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_168",
+    "name": "Cordierite",
+    "formula": "2MgO·2Al₂O₃·5SiO₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      800.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_169",
+    "name": "Steatite",
+    "formula": "MgO·SiO₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      920.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_170",
+    "name": "Forsterite",
+    "formula": "2MgO·SiO₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      900.0,
+      0.19,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_171",
+    "name": "Spinel MgAl₂O₄",
+    "formula": "MgAl₂O₄",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      940.0,
+      0.21,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1973,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_172",
+    "name": "Hafnium Carbide",
+    "formula": "HfC",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      250.0,
+      0.04,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_173",
+    "name": "Tantalum Carbide",
+    "formula": "TaC",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      255.0,
+      0.04,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_174",
+    "name": "Niobium Carbide",
+    "formula": "NbC",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      260.0,
+      0.04,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_175",
+    "name": "Calcium Phosphate HA",
+    "formula": "Ca₁₀(PO₄)₆(OH)₂",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      630.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_176",
+    "name": "Barium Titanate",
+    "formula": "BaTiO₃",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      434.0,
+      0.08,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_177",
+    "name": "Lead Zirconate Titanate",
+    "formula": "PZT",
+    "category": "Ceramics",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      340.0,
+      0.06,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_178",
+    "name": "Silicon (semiconductor grade)",
+    "formula": "Si",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      700.0,
+      0.08,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_179",
+    "name": "Germanium",
+    "formula": "Ge",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      310.0,
+      0.04,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_180",
+    "name": "Gallium Arsenide",
+    "formula": "GaAs",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      327.0,
+      0.03,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_181",
+    "name": "Indium Phosphide",
+    "formula": "InP",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      290.0,
+      0.03,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_182",
+    "name": "Gallium Nitride",
+    "formula": "GaN",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      490.0,
+      0.05,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_183",
+    "name": "Silicon Carbide 4H",
+    "formula": "SiC",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      670.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_184",
+    "name": "Cadmium Telluride",
+    "formula": "CdTe",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      210.0,
+      0.02,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_185",
+    "name": "Cadmium Sulfide",
+    "formula": "CdS",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      370.0,
+      0.03,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_186",
+    "name": "Zinc Oxide (semiconductor)",
+    "formula": "ZnO",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      494.0,
+      0.05,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_187",
+    "name": "Silicon Germanium",
+    "formula": "SiGe",
+    "category": "Semiconductors",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      500.0,
+      0.06,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_188",
+    "name": "Polyethylene HDPE",
+    "formula": "(C₂H₄)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1900.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo / MatWeb"
+  },
+  {
+    "id": "mat_189",
+    "name": "Polyethylene LDPE",
+    "formula": "(C₂H₄)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      2300.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_190",
+    "name": "Polypropylene",
+    "formula": "(C₃H₆)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1900.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_191",
+    "name": "Polystyrene",
+    "formula": "(C₈H₈)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1300.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_192",
+    "name": "PVC Rigid",
+    "formula": "(C₂H₃Cl)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      900.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_193",
+    "name": "PTFE Teflon",
+    "formula": "(C₂F₄)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1050.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "PoLyInfo / MatWeb"
+  },
+  {
+    "id": "mat_194",
+    "name": "Nylon 6",
+    "formula": "(C₆H₁₁NO)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1700.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_195",
+    "name": "Nylon 66",
+    "formula": "(C₁₂H₂₂N₂O₂)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1670.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_196",
+    "name": "Polycarbonate",
+    "formula": "(C₁₆H₁₄O₃)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1250.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_197",
+    "name": "PMMA Acrylic",
+    "formula": "(C₅H₈O₂)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1470.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_198",
+    "name": "PET",
+    "formula": "(C₁₀H₈O₄)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1240.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_199",
+    "name": "ABS",
+    "formula": "Acrylonitrile-Butadiene-Styrene",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1400.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_200",
+    "name": "Polyurethane Thermoplastic",
+    "formula": "(C₃H₈N₂O)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1800.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_201",
+    "name": "Epoxy Resin",
+    "formula": "Epoxy",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1200.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_202",
+    "name": "Phenolic Resin",
+    "formula": "Phenol-Formaldehyde",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1700.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_203",
+    "name": "Polyimide Kapton",
+    "formula": "(C₂₂H₁₀N₂O₅)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1090.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 673,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_204",
+    "name": "PEEK",
+    "formula": "(C₁₉H₁₂O₃)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1340.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_205",
+    "name": "PPS Polyphenylene Sulfide",
+    "formula": "(C₆H₄S)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1090.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_206",
+    "name": "POM Acetal",
+    "formula": "(CH₂O)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1465.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "PoLyInfo"
+  },
+  {
+    "id": "mat_207",
+    "name": "Silicone Rubber",
+    "formula": "(Si-O)ₙ",
+    "category": "Polymers",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1460.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_208",
+    "name": "Soda-Lime Glass",
+    "formula": "SiO₂-Na₂O-CaO",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      840.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 873,
+    "source": "MatWeb / AZoM"
+  },
+  {
+    "id": "mat_209",
+    "name": "Borosilicate Glass",
+    "formula": "SiO₂-B₂O₃",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      830.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_210",
+    "name": "Fused Silica",
+    "formula": "SiO₂",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      740.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_211",
+    "name": "Lead Glass",
+    "formula": "SiO₂-PbO",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      560.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_212",
+    "name": "Aluminosilicate Glass",
+    "formula": "SiO₂-Al₂O₃",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      800.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_213",
+    "name": "Quartz Glass",
+    "formula": "SiO₂",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      745.0,
+      0.14,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_214",
+    "name": "Zerodur Glass-Ceramic",
+    "formula": "Li₂O-Al₂O₃-SiO₂",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      820.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_215",
+    "name": "Pyrex Glass",
+    "formula": "Borosilicate",
+    "category": "Glasses",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      835.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_216",
+    "name": "Fireclay Brick",
+    "formula": "Al₂O₃-SiO₂",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      880.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1873,
+    "source": "MatWeb / AZoM"
+  },
+  {
+    "id": "mat_217",
+    "name": "High Alumina Brick",
+    "formula": "Al₂O₃",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      880.0,
+      0.22,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_218",
+    "name": "Silica Brick",
+    "formula": "SiO₂",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      740.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_219",
+    "name": "Magnesia Brick",
+    "formula": "MgO",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      940.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_220",
+    "name": "Chromite Refractory",
+    "formula": "FeCr₂O₄",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      840.0,
+      0.16,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_221",
+    "name": "Zircon Refractory",
+    "formula": "ZrSiO₄",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      620.0,
+      0.12,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2073,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_222",
+    "name": "Carbon Refractory",
+    "formula": "C",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      710.0,
+      0.1,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 3273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_223",
+    "name": "Silicon Carbide Refractory",
+    "formula": "SiC",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      670.0,
+      0.2,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_224",
+    "name": "Insulating Firebrick",
+    "formula": "Al₂O₃-SiO₂",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      900.0,
+      0.18,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1673,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_225",
+    "name": "Castable Refractory",
+    "formula": "Al₂O₃-CaO",
+    "category": "Refractories",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      850.0,
+      0.19,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1873,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_226",
+    "name": "Carbon Fiber/Epoxy",
+    "formula": "CF/EP",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      800.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_227",
+    "name": "Glass Fiber/Epoxy",
+    "formula": "GF/EP",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      900.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_228",
+    "name": "Carbon Fiber/PEEK",
+    "formula": "CF/PEEK",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      750.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_229",
+    "name": "Aramid Fiber/Epoxy",
+    "formula": "KF/EP",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      1100.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_230",
+    "name": "Boron Fiber/Aluminum",
+    "formula": "BF/Al",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      650.0,
+      0.1,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_231",
+    "name": "SiC Fiber/SiC Matrix",
+    "formula": "SiC/SiC",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      700.0,
+      0.15,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 1473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_232",
+    "name": "Carbon/Carbon Composite",
+    "formula": "C/C",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      600.0,
+      0.08,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_233",
+    "name": "GFRP Polyester",
+    "formula": "GF/Polyester",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      950.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_234",
+    "name": "CFRP Unidirectional",
+    "formula": "CF/Epoxy UD",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      780.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_235",
+    "name": "Metal Matrix Al-SiC",
+    "formula": "Al-SiC",
+    "category": "Composites",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      850.0,
+      0.12,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 773,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_236",
+    "name": "Concrete (Normal)",
+    "formula": "Cement-Aggregate",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      880.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_237",
+    "name": "Wood (Oak)",
+    "formula": "Cellulose-Lignin",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      2000.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_238",
+    "name": "Asphalt",
+    "formula": "Bitumen-Aggregate",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      920.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_239",
+    "name": "Ice",
+    "formula": "H₂O",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      2100.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 273,
+    "source": "NIST Chemistry WebBook",
+    "phase_transition_k": 273,
+    "phase_transition_label": "Melting point"
+  },
+  {
+    "id": "mat_240",
+    "name": "Paraffin Wax",
+    "formula": "CₙH₂ₙ₊₂",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      2900.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_241",
+    "name": "Graphite (nuclear grade)",
+    "formula": "C",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      710.0,
+      0.1,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 2273,
+    "source": "MatWeb",
+    "phase_transition_k": 3823,
+    "phase_transition_label": "Sublimation"
+  },
+  {
+    "id": "mat_242",
+    "name": "Aerogel Silica",
+    "formula": "SiO₂",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      840.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 473,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_243",
+    "name": "Rock (Granite)",
+    "formula": "Silicate minerals",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      790.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "MatWeb"
+  },
+  {
+    "id": "mat_244",
+    "name": "Soil (Dry)",
+    "formula": "Mineral mixture",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      800.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "Engineering handbook"
+  },
+  {
+    "id": "mat_245",
+    "name": "Water (liquid)",
+    "formula": "H₂O",
+    "category": "Other",
+    "equation_type": "polynomial_kg",
+    "coefficients": [
+      4182.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "molar_mass_g_mol": null,
+    "t_min_k": 273,
+    "t_max_k": 373,
+    "source": "NIST Chemistry WebBook"
+  }
+]
+</script>
+
+<!-- ============ PYTHON (runs in the browser via Pyodide) ============ -->
+<script type="py" config='{"packages":["numpy"]}'>
+import json
+import random
+import numpy as np
+from pyscript import document, window
+from pyodide.ffi import create_proxy, to_js
+import js
+
+Object = js.Object
+def jsobj(x):
+    """Recursively convert Python dict/list to plain JS objects/arrays for Plotly."""
+    return to_js(x, dict_converter=Object.fromEntries)
+
+# ---------------- Config (from src/config.py) ----------------
+DATA_SOURCES = [
+    {"name":"NIST Chemistry WebBook","url":"https://webbook.nist.gov/chemistry/","description":"Shomate equation coefficients for elements, gases, and inorganic compounds."},
+    {"name":"NIST JANAF Thermochemical Tables","url":"https://www.nist.gov/srd/janaf","description":"Thermochemical data for pure substances and reactions."},
+    {"name":"MatWeb Material Property Data","url":"https://www.matweb.com/","description":"Engineering properties for metals, alloys, ceramics, and polymers."},
+    {"name":"ASM Handbook","url":"https://www.asminternational.org/","description":"Authoritative data for metals, alloys, and heat-treatment properties."},
+    {"name":"PoLyInfo (NIMS Polymer Database)","url":"https://polymer.nims.go.jp/","description":"Thermophysical properties of commercial polymer materials."},
+    {"name":"AZoM Materials Database","url":"https://www.azom.com/","description":"Specific heat and thermal data for engineering materials."},
+]
+SOURCE_URLS = {
+    "NIST Chemistry WebBook (webbook.nist.gov)":"https://webbook.nist.gov/chemistry/",
+    "MatWeb / ASM Handbook":"https://www.matweb.com/","MatWeb":"https://www.matweb.com/",
+    "ASM Handbook":"https://www.asminternational.org/","PoLyInfo / MatWeb":"https://polymer.nims.go.jp/",
+    "PoLyInfo":"https://polymer.nims.go.jp/","MatWeb / AZoM":"https://www.azom.com/",
+    "MatWeb / ASM":"https://www.matweb.com/","MatWeb / ASM Handbook":"https://www.matweb.com/",
+    "Engineering handbook":"https://webbook.nist.gov/chemistry/",
+}
+CATEGORY_COLORS = {"Gases":"#ff6b6b","Metals and alloys":"#54a0ff","Ceramics":"#c56cf0","Semiconductors":"#2ed573",
+    "Polymers":"#ffa502","Glasses":"#1dd1a1","Refractories":"#ff6348","Composites":"#70a1ff","Other":"#a4b0be"}
+VIVID_PALETTE = ["#AA0DFE","#3283FE","#85660D","#782AB6","#565656","#1C8356","#16FF32","#F7E1A0","#E2E2E2","#1CBE4F",
+    "#C4451C","#DEA0FD","#FE00FA","#325A9B","#FEAF16","#F8A19F","#90AD1C","#F6222E","#1CFFCE","#2ED9FF","#B10DA1",
+    "#C075A6","#FC1CBF","#B00068","#FBE426","#FA0087","#636EFA","#EF553B","#00CC96","#AB63FA","#FFA15A","#19D3F3",
+    "#FF6692","#B6E880","#FF97FF","#FECB52","#1F77B4","#FF7F0E","#2CA02C","#D62728","#9467BD","#8C564B","#E377C2",
+    "#7F7F7F","#BCBD22","#17BECF"]
+DARK = {"paper":"#12151c","plot":"#0d1117","grid":"#2a3140","line":"#8b9cb3","title":"#e8edf5","legend":"#c5d0de","spike":"#4ecdc4","annot":"#9aa8bc"}
+
+# ---------------- Cp engines (verbatim from src/cp_calculator.py) ----------------
+def shomate_cp(temperature_k, coeffs):
+    t = temperature_k / 1000.0
+    a, b, c, d, e = coeffs
+    return a + b*t + c*t**2 + d*t**3 + e/t**2
+
+def polynomial_cp_kg(temperature_k, coeffs):
+    a, b, c, d = coeffs
+    return a + b*temperature_k + c*temperature_k**2 + d*temperature_k**3
+
+def nasa_cp_molar(temperature_k, coeffs):
+    r_gas = 8.314462618
+    a1, a2, a3, a4, a5 = coeffs
+    t = temperature_k
+    return (a1 + a2*t + a3*t**2 + a4*t**3 + a5*t**4) * r_gas
+
+def calculate_cp(temperature_k, material):
+    eq_type = material["equation_type"]
+    coeffs = material["coefficients"]
+    molar_mass = material.get("molar_mass_g_mol")
+    if eq_type == "shomate":
+        cp_molar = shomate_cp(temperature_k, coeffs)
+        if molar_mass is None or molar_mass <= 0:
+            raise ValueError(f"Molar mass required for Shomate: {material['name']}")
+        return cp_molar * 1000.0 / molar_mass
+    if eq_type == "polynomial_kg":
+        return polynomial_cp_kg(temperature_k, coeffs)
+    if eq_type == "nasa":
+        cp_molar = nasa_cp_molar(temperature_k, coeffs)
+        if molar_mass is None or molar_mass <= 0:
+            raise ValueError(f"Molar mass required for NASA: {material['name']}")
+        return cp_molar * 1000.0 / molar_mass
+    raise ValueError(f"Unknown equation type: {eq_type}")
+
+def validate_temperature_range(t_min, t_max, valid_min, valid_max):
+    warnings = []
+    if t_min < valid_min:
+        warnings.append(f"Minimum temperature {t_min:.1f} K is below valid range ({valid_min:.1f} K). Extrapolation may be inaccurate.")
+    if t_max > valid_max:
+        warnings.append(f"Maximum temperature {t_max:.1f} K exceeds valid range ({valid_max:.1f} K). Extrapolation may be inaccurate.")
+    return warnings
+
+def cp_at_temperature(material, temperature_k):
+    t = float(np.clip(temperature_k, material["t_min_k"], material["t_max_k"]))
+    val = float(calculate_cp(np.array([t]), material)[0])
+    return max(val, 0.0)
+
+# ---------------- State ----------------
+MATERIALS = []
+selected_ids = []
+last_plot_rows = []
+_proxies = []  # keep event-handler proxies alive
+
+def gid(i): return document.getElementById(i)
+def esc(s):
+    return (str(s).replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;"))
+
+def get_categories():
+    return sorted({m["category"] for m in MATERIALS})
+
+def filter_materials(category, search):
+    r = MATERIALS
+    if category and category != "All":
+        r = [m for m in r if m["category"] == category]
+    q = (search or "").strip().lower()
+    if q:
+        r = [m for m in r if q in m["name"].lower() or q in m["formula"].lower()
+             or q in m["category"].lower() or q in m["source"].lower()]
+    return r
+
+def get_settings():
+    use_c = gid("unit").value == "C"
+    tmin = float(gid("tmin").value); tmax = float(gid("tmax").value)
+    tmin_k = tmin + 273.15 if use_c else tmin
+    tmax_k = tmax + 273.15 if use_c else tmax
+    rt = float(gid("rankTemp").value)
+    rank_k = rt + 273.15 if use_c else rt
+    return dict(use_c=use_c, tmin_k=tmin_k, tmax_k=tmax_k, n_points=int(gid("npoints").value),
+        show_phase=gid("showPhase").checked, show_molar=gid("showMolar").checked,
+        display_mode=gid("displayMode").value, log_y=gid("logY").checked,
+        color_by_category=gid("colorCat").checked, rank_temp_k=rank_k)
+
+# ---------------- Plot (mirrors src/plotting.build_cp_plot) ----------------
+def y_label_for(show_molar, mode):
+    if mode == "normalized": return "Cp / Cp(300 K)"
+    if mode == "delta": return "ΔCp from T_min (J mol⁻¹ K⁻¹)" if show_molar else "ΔCp from T_min (J kg⁻¹ K⁻¹)"
+    return "Cp (J mol⁻¹ K⁻¹)" if show_molar else "Cp (J kg⁻¹ K⁻¹)"
+
+def transform_y(cp_plot, mode, mat, show_molar):
+    if mode == "absolute" or len(cp_plot) == 0:
+        return cp_plot
+    ref_t = float(np.clip(300.0, mat["t_min_k"], mat["t_max_k"]))
+    if show_molar and mat.get("molar_mass_g_mol"):
+        ref_cp = float(calculate_cp(np.array([ref_t]), mat)[0] * mat["molar_mass_g_mol"] / 1000.0)
+    else:
+        ref_cp = float(calculate_cp(np.array([ref_t]), mat)[0])
+    if mode == "normalized":
+        return cp_plot / ref_cp if ref_cp > 0 else cp_plot
+    return cp_plot - cp_plot[0]
+
+def build_plot(*_):
+    global last_plot_rows
+    s = get_settings()
+    warn_box = gid("plotWarnings"); warn_box.innerHTML = ""
+    last_plot_rows = []
+
+    if not selected_ids:
+        warn_box.innerHTML = '<div class="warn">Select at least one material from the list.</div>'
+        window.Plotly.purge("plot"); gid("plotHero").textContent = ""; render_inspector(); return
+    if s["tmin_k"] >= s["tmax_k"]:
+        warn_box.innerHTML = '<div class="warn">T minimum must be less than T maximum.</div>'
+        window.Plotly.purge("plot"); return
+
+    if len(selected_ids) > 20 and s["display_mode"] == "absolute":
+        warn_box.innerHTML += (f'<div class="info"><strong>{len(selected_ids)} materials selected.</strong> '
+            'Absolute Cp values span a huge range, so most curves look flat. Switch <strong>Y-axis mode</strong> '
+            'to <strong>Normalized</strong> to see temperature trends clearly.</div>')
+
+    temperatures_k = np.linspace(s["tmin_k"], s["tmax_k"], s["n_points"])
+    x_label = "Temperature (°C)" if s["use_c"] else "Temperature (K)"
+    y_label = y_label_for(s["show_molar"], s["display_mode"])
+    mat_map = {m["id"]: m for m in MATERIALS}
+    traces, shapes, annotations, warnings = [], [], [], []
+    n_sel = len(selected_ids)
+    line_width = 2.5 if n_sel <= 10 else (1.8 if n_sel <= 40 else 1.0)
+    many = n_sel > 15
+    has_data = False
+
+    for i, mid in enumerate(selected_ids):
+        mat = mat_map.get(mid)
+        if not mat: continue
+        color = CATEGORY_COLORS.get(mat["category"], "#a4b0be") if s["color_by_category"] else VIVID_PALETTE[i % len(VIVID_PALETTE)]
+        for msg in validate_temperature_range(s["tmin_k"], s["tmax_k"], mat["t_min_k"], mat["t_max_k"]):
+            warnings.append(f"<strong>{esc(mat['name'])}</strong>: {esc(msg)}")
+
+        mask = (temperatures_k >= mat["t_min_k"]) & (temperatures_k <= mat["t_max_k"])
+        t_valid = temperatures_k[mask]
+        if len(t_valid) == 0:
+            warnings.append(f"<strong>{esc(mat['name'])}</strong>: no overlap between your T range "
+                f"({s['tmin_k']:.0f}–{s['tmax_k']:.0f} K) and valid range ({mat['t_min_k']:.0f}–{mat['t_max_k']:.0f} K).")
+            continue
+        cp_valid = np.clip(calculate_cp(t_valid, mat), 0, None)
+        cp_plot = cp_valid * mat["molar_mass_g_mol"] / 1000.0 if (s["show_molar"] and mat.get("molar_mass_g_mol")) else cp_valid
+        cp_plot = transform_y(cp_plot, s["display_mode"], mat, s["show_molar"])
+        x_plot = t_valid - 273.15 if s["use_c"] else t_valid
+        has_data = True
+
+        unit = "°C" if s["use_c"] else "K"
+        if s["display_mode"] == "absolute":
+            cp_fmt = "%{y:.2f} J/mol·K" if s["show_molar"] else "%{y:.1f} J/kg·K"
+        elif s["display_mode"] == "normalized":
+            cp_fmt = "%{y:.4f} (ratio)"
+        else:
+            cp_fmt = "%{y:.2f} ΔCp"
+
+        traces.append({
+            "x": x_plot.tolist(), "y": cp_plot.tolist(), "mode":"lines", "type":"scatter",
+            "name": mat["name"], "connectgaps": False, "line": {"width": line_width, "color": color},
+            "hovertemplate": (f"<b>{esc(mat['name'])}</b> ({esc(mat['formula'])})<br>Category: {esc(mat['category'])}<br>"
+                f"T: %{{x:.1f}} {unit}<br>Cp: {cp_fmt}<br>Source: {esc(mat['source'])}<extra></extra>"),
+        })
+
+        for yv, tk, cpr in zip(cp_plot.tolist(), t_valid.tolist(), cp_valid.tolist()):
+            last_plot_rows.append({"Material":mat["name"],"Formula":mat["formula"],"Category":mat["category"],
+                "Temperature_K":round(tk,2),"Temperature_C":round(tk-273.15,2),"Cp_J_kg_K":round(cpr,4),
+                "Plotted_Y":round(yv,6),"Display_Mode":s["display_mode"],"Source":mat["source"]})
+
+        if s["show_phase"] and mat.get("phase_transition_k"):
+            pt = float(mat["phase_transition_k"])
+            if s["tmin_k"] <= pt <= s["tmax_k"]:
+                px = pt - 273.15 if s["use_c"] else pt
+                shapes.append({"type":"line","x0":px,"x1":px,"yref":"paper","y0":0,"y1":1,
+                    "line":{"dash":"dot","color":color,"width":1.5}})
+                annotations.append({"x":px,"yref":"paper","y":1,"text":mat.get("phase_transition_label","Phase change"),
+                    "showarrow":False,"font":{"size":10,"color":color},"xanchor":"left","yanchor":"top"})
+
+    if not has_data:
+        annotations.append({"text":"No data in selected temperature range — adjust T min/max","xref":"paper","yref":"paper",
+            "x":0.5,"y":0.5,"showarrow":False,"font":{"size":16,"color":DARK["annot"]}})
+
+    yaxis = {"title":{"text":y_label,"font":{"color":DARK["line"]}},"tickfont":{"color":DARK["line"]},
+        "showgrid":True,"gridcolor":DARK["grid"],"zeroline":s["display_mode"]=="delta","zerolinecolor":"#3d4a5c",
+        "showline":True,"linewidth":1.5,"linecolor":DARK["line"],
+        "type":"log" if (s["log_y"] and s["display_mode"]=="absolute") else "linear"}
+
+    layout = {
+        "title":{"text":f"Cp vs Temperature — {n_sel} material{'s' if n_sel!=1 else ''}, {s['n_points']} points each",
+            "font":{"size":18,"color":DARK["title"]},"x":0.5},
+        "xaxis":{"title":{"text":x_label,"font":{"color":DARK["line"]}},"tickfont":{"color":DARK["line"]},
+            "showgrid":True,"gridcolor":DARK["grid"],"zeroline":False,"showline":True,"linewidth":1.5,"linecolor":DARK["line"],
+            "showspikes":True,"spikemode":"across","spikesnap":"cursor","spikecolor":DARK["spike"],"spikethickness":1},
+        "yaxis":yaxis,"template":"plotly_dark","hovermode":"closest" if many else "x unified",
+        "hoverlabel":{"bgcolor":"#1e2530","font":{"color":"#e8edf5"},"bordercolor":"#4ecdc4"},
+        "legend":{"orientation":"h","yanchor":"bottom","y":1.02,"xanchor":"center","x":0.5,
+            "font":{"size":10 if many else 12,"color":DARK["legend"]},"bgcolor":"rgba(18,21,28,0.85)"},
+        "margin":{"t":90,"b":60,"l":70,"r":20},"paper_bgcolor":DARK["paper"],"plot_bgcolor":DARK["plot"],
+        "shapes":shapes,"annotations":annotations,"height":580 if many else 550}
+
+    window.Plotly.react("plot", jsobj(traces), jsobj(layout),
+        jsobj({"displayModeBar":True,"scrollZoom":True,"responsive":True}))
+    gid("plotHero").textContent = (f"{n_sel} materials · {s['n_points']} temperature points each · "
+        "hover a line to read values · use the tables below to export data")
+
+    if warnings:
+        gid("plotWarnings").innerHTML += (f"<details><summary>Warnings ({len(warnings)})</summary>"
+            + "".join(f"<div>• {w}</div>" for w in warnings) + "</details>")
+    render_inspector()
+
+# ---------------- Inspector ----------------
+def render_inspector(*_):
+    s = get_settings()
+    slider = gid("inspectT")
+    lo = s["tmin_k"] - 273.15 if s["use_c"] else s["tmin_k"]
+    hi = s["tmax_k"] - 273.15 if s["use_c"] else s["tmax_k"]
+    slider.min = lo; slider.max = hi; slider.step = 5
+    if float(slider.value) < lo or float(slider.value) > hi:
+        slider.value = float(np.clip(27 if s["use_c"] else 300, lo, hi))
+    insp = float(slider.value)
+    insp_k = insp + 273.15 if s["use_c"] else insp
+    gid("inspectVal").textContent = (f"{insp:.0f} °C" if s["use_c"] else f"{insp:.0f} K")
+
+    mat_map = {m["id"]: m for m in MATERIALS}
+    rows = []
+    for mid in selected_ids:
+        mat = mat_map.get(mid)
+        if not mat: continue
+        in_range = mat["t_min_k"] <= insp_k <= mat["t_max_k"]
+        clamped = float(np.clip(insp_k, mat["t_min_k"], mat["t_max_k"]))
+        rows.append((mat, cp_at_temperature(mat, insp_k), in_range, clamped))
+    rows.sort(key=lambda r: r[1], reverse=True)
+
+    html = ("<table><thead><tr><th>Material</th><th>Formula</th><th>Category</th><th>T (K)</th>"
+        "<th>T (°C)</th><th>Cp (J/kg·K)</th><th>In valid range</th></tr></thead><tbody>")
+    for mat, cp, in_range, clamped in rows:
+        rng = "Yes" if in_range else f"No (clamped to {clamped:.0f} K)"
+        html += (f"<tr><td>{esc(mat['name'])}</td><td>{esc(mat['formula'])}</td><td>{esc(mat['category'])}</td>"
+            f"<td>{insp_k:.1f}</td><td>{insp_k-273.15:.1f}</td><td>{cp:.2f}</td><td>{rng}</td></tr>")
+    html += "</tbody></table>"
+    gid("inspectorWrap").innerHTML = html if rows else '<div class="caption" style="padding:10px">No materials selected.</div>'
+
+# ---------------- Material list ----------------
+def render_mat_list(*_):
+    filtered = filter_materials(gid("catFilter").value, gid("search").value)
+    lst = gid("matList"); lst.innerHTML = ""
+    sel = set(selected_ids)
+    for i, m in enumerate(filtered):
+        div = document.createElement("div")
+        div.className = "mat-item selected" if m["id"] in sel else "mat-item"
+        checked = "checked" if m["id"] in sel else ""
+        color = CATEGORY_COLORS.get(m["category"], "#a4b0be")
+        div.innerHTML = (f'<input type="checkbox" {checked} data-id="{m["id"]}" />'
+            f'<div class="mi-body"><div class="mi-name">{i+1}. {esc(m["name"])} '
+            f'<span class="mono">{esc(m["formula"])}</span></div>'
+            f'<div class="meta"><span class="cat-dot" style="background:{color};color:{color}"></span>'
+            f'{esc(m["category"])} · {m["t_min_k"]:.0f}–{m["t_max_k"]:.0f} K</div></div>')
+        def make_handler(mid, d):
+            def handler(evt):
+                cb = d.querySelector("input")
+                if evt.target != cb:
+                    cb.checked = not cb.checked
+                if cb.checked: d.classList.add("selected")
+                else: d.classList.remove("selected")
+                toggle_select(mid, cb.checked)
+            return handler
+        p = create_proxy(make_handler(m["id"], div))
+        _proxies.append(p)
+        div.addEventListener("click", p)
+        lst.appendChild(div)
+    update_caption(filtered)
+
+def update_caption(filtered=None):
+    if filtered is None:
+        filtered = filter_materials(gid("catFilter").value, gid("search").value)
+    gid("selCaption").innerHTML = (f"<strong>{len(selected_ids)}</strong> selected · "
+        f"<strong>{len(filtered)}</strong> shown · <strong>{len(MATERIALS)}</strong> total")
+    try:
+        gid("statSelected").textContent = str(len(selected_ids))
+    except Exception:
+        pass
+
+def toggle_select(mid, on):
+    global selected_ids
+    if on:
+        if mid not in selected_ids: selected_ids.append(mid)
+    else:
+        selected_ids = [x for x in selected_ids if x != mid]
+    update_caption(); build_plot(); render_ranking()
+
+# ---------------- Ranking ----------------
+def render_ranking(*_):
+    s = get_settings()
+    filtered = filter_materials(gid("catFilter").value, gid("search").value)
+    rows = sorted(((m, cp_at_temperature(m, s["rank_temp_k"])) for m in filtered), key=lambda r: r[1], reverse=True)
+    html = f'<h3>Ranking by Cp at T = {s["rank_temp_k"]:.1f} K</h3>'
+    if not rows:
+        gid("tab-ranking").innerHTML = html + '<div class="info">No materials to rank.</div>'; return
+    html += ('<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Material</th><th>Formula</th>'
+        '<th>Category</th><th>Cp (J/kg·K)</th><th>Source</th></tr></thead><tbody>')
+    for i, (m, cp) in enumerate(rows):
+        html += (f"<tr><td>{i+1}</td><td>{esc(m['name'])}</td><td>{esc(m['formula'])}</td>"
+            f"<td>{esc(m['category'])}</td><td>{cp:.2f}</td><td>{esc(m['source'])}</td></tr>")
+    html += '</tbody></table></div><div id="rankChart" style="height:420px;margin-top:12px"></div>'
+    gid("tab-ranking").innerHTML = html
+
+    top = rows[:20]
+    cats = list(dict.fromkeys(m["category"] for m, _ in top))
+    traces = []
+    for cat in cats:
+        items = [(m, cp) for m, cp in top if m["category"] == cat]
+        traces.append({"x":[m["name"] for m,_ in items],"y":[round(cp,2) for _,cp in items],
+            "name":cat,"type":"bar","marker":{"color":CATEGORY_COLORS.get(cat,"#2e86ab")}})
+    layout = {"title":{"text":f"Top 20 Materials by Cp at {s['rank_temp_k']:.0f} K","font":{"color":DARK['title']}},
+        "barmode":"group","template":"plotly_dark","paper_bgcolor":DARK["paper"],"plot_bgcolor":DARK["plot"],
+        "xaxis":{"tickangle":-45,"tickfont":{"color":DARK["line"]}},
+        "yaxis":{"title":"Cp (J/kg·K)","tickfont":{"color":DARK["line"]}},
+        "legend":{"font":{"color":DARK["legend"]}},"margin":{"b":140}}
+    window.Plotly.newPlot("rankChart", jsobj(traces), jsobj(layout), jsobj({"responsive":True,"displayModeBar":False}))
+
+# ---------------- Browse ----------------
+def render_browse(*_):
+    filtered = filter_materials(gid("catFilter").value, gid("search").value)
+    html = ('<h3>Full Database</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Formula</th>'
+        '<th>Category</th><th>Source</th><th>T min (K)</th><th>T max (K)</th><th>Molar mass</th></tr></thead><tbody>')
+    for m in filtered:
+        mm = m.get("molar_mass_g_mol", "—")
+        html += (f"<tr><td>{esc(m['name'])}</td><td>{esc(m['formula'])}</td><td>{esc(m['category'])}</td>"
+            f"<td>{esc(m['source'])}</td><td>{m['t_min_k']}</td><td>{m['t_max_k']}</td><td>{mm}</td></tr>")
+    html += '</tbody></table></div><div id="catPie" style="height:400px;margin-top:12px"></div>'
+    gid("tab-browse").innerHTML = html
+
+    counts = {}
+    for m in filtered: counts[m["category"]] = counts.get(m["category"], 0) + 1
+    trace = {"labels":list(counts.keys()),"values":list(counts.values()),"type":"pie","hole":0.35,
+        "marker":{"colors":[CATEGORY_COLORS.get(c,"#a4b0be") for c in counts]}}
+    layout = {"title":{"text":"Materials by Category","font":{"color":DARK["title"]}},"template":"plotly_dark",
+        "paper_bgcolor":DARK["paper"],"plot_bgcolor":DARK["plot"],"legend":{"font":{"color":DARK["legend"]}}}
+    window.Plotly.newPlot("catPie", jsobj([trace]), jsobj(layout), jsobj({"responsive":True,"displayModeBar":False}))
+
+# ---------------- Sources ----------------
+def render_sources():
+    html = (f'<h3>Data Sources &amp; Citations</h3><p class="caption">All <strong>{len(MATERIALS)}</strong> '
+        'materials use thermodynamic coefficients from the peer-reviewed and engineering sources below.</p>'
+        '<h4>Primary References</h4>')
+    for s in DATA_SOURCES:
+        html += (f'<div class="source-card"><strong><a href="{s["url"]}" target="_blank">{esc(s["name"])}</a></strong>'
+            f'<br><span class="caption">{esc(s["description"])}</span></div>')
+    counts = {}
+    for m in MATERIALS: counts[m["source"]] = counts.get(m["source"], 0) + 1
+    ordered = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+    html += ('<h4>Materials per Source</h4><div class="table-wrap"><table><thead><tr><th>Source</th>'
+        '<th>Material Count</th><th>Reference URL</th></tr></thead><tbody>')
+    for src, n in ordered:
+        url = SOURCE_URLS.get(src, "https://webbook.nist.gov/chemistry/")
+        html += f'<tr><td>{esc(src)}</td><td>{n}</td><td><a href="{url}" target="_blank">{esc(url)}</a></td></tr>'
+    html += '</tbody></table></div>'
+    html += ('<h4>Equations Used</h4><div class="table-wrap"><table><thead><tr><th>Equation</th><th>Formula</th>'
+        '<th>Used For</th></tr></thead><tbody>'
+        '<tr><td><strong>NIST Shomate</strong></td><td>Cp = A + Bt + Ct² + Dt³ + E/t², t = T/1000</td>'
+        '<td>Elements, gases, compounds</td></tr>'
+        '<tr><td><strong>Polynomial</strong></td><td>Cp = A + BT + CT² + DT³ (J/kg·K)</td>'
+        '<td>Alloys, polymers, ceramics</td></tr></tbody></table></div>'
+        '<div id="srcBar" style="height:360px;margin-top:12px"></div>')
+    gid("tab-sources").innerHTML = html
+    trace = {"x":[s for s,_ in ordered],"y":[n for _,n in ordered],"type":"bar","marker":{"color":"#2e86ab"}}
+    layout = {"title":{"text":"Number of Materials from Each Source","font":{"color":DARK["title"]}},"template":"plotly_dark",
+        "paper_bgcolor":DARK["paper"],"plot_bgcolor":DARK["plot"],
+        "xaxis":{"tickangle":-30,"tickfont":{"color":DARK["line"]}},"yaxis":{"tickfont":{"color":DARK["line"]}},"margin":{"b":160}}
+    window.Plotly.newPlot("srcBar", jsobj([trace]), jsobj(layout), jsobj({"responsive":True,"displayModeBar":False}))
+
+# ---------------- CSV export ----------------
+def download_csv(*_):
+    if not last_plot_rows:
+        window.alert("No plot data to export."); return
+    cols = list(last_plot_rows[0].keys())
+    lines = [",".join(cols)]
+    for r in last_plot_rows:
+        cells = []
+        for c in cols:
+            v = str(r[c])
+            if any(ch in v for ch in [",", '"', "\n"]):
+                v = '"' + v.replace('"', '""') + '"'
+            cells.append(v)
+        lines.append(",".join(cells))
+    blob = js.Blob.new(jsobj(["\n".join(lines)]), jsobj({"type":"text/csv"}))
+    url = js.URL.createObjectURL(blob)
+    a = document.createElement("a"); a.href = url; a.download = "cp_vs_t_data.csv"; a.click()
+    js.URL.revokeObjectURL(url)
+
+# ---------------- Unit switch / refresh ----------------
+def on_unit_change(*_):
+    use_c = gid("unit").value == "C"
+    if use_c:
+        gid("tmin").value = 25; gid("tmax").value = 500; gid("rankTemp").value = 27
+    else:
+        gid("tmin").value = 298; gid("tmax").value = 773; gid("rankTemp").value = 300
+    build_plot(); render_ranking()
+
+def on_filter_change(*_):
+    render_mat_list(); render_ranking(); render_browse()
+
+def on_npoints(*_):
+    gid("nptsVal").textContent = gid("npoints").value; build_plot()
+
+def select_all(*_):
+    for m in filter_materials(gid("catFilter").value, gid("search").value):
+        if m["id"] not in selected_ids: selected_ids.append(m["id"])
+    render_mat_list(); build_plot(); render_ranking()
+
+def clear_sel(*_):
+    global selected_ids
+    selected_ids = []
+    render_mat_list(); build_plot(); render_ranking()
+
+def apply_preset(kind):
+    global selected_ids
+    if kind == "__reset__":
+        selected_ids = [m["id"] for m in MATERIALS[:3]]
+    elif kind == "__random__":
+        selected_ids = [m["id"] for m in random.sample(MATERIALS, min(5, len(MATERIALS)))]
+    else:
+        selected_ids = [m["id"] for m in MATERIALS if m["category"] == kind][:6]
+    gid("catFilter").value = "All"
+    gid("search").value = ""
+    render_mat_list(); build_plot(); render_ranking(); render_browse()
+
+def download_png(*_):
+    window.Plotly.downloadImage("plot", jsobj(
+        {"format": "png", "width": 1400, "height": 800, "filename": "cp_vs_t_plot", "scale": 2}))
+
+def switch_tab(tab_name, tab_el):
+    for t in document.querySelectorAll(".tab"): t.classList.remove("active")
+    for c in document.querySelectorAll(".tab-content"): c.classList.remove("active")
+    tab_el.classList.add("active")
+    gid("tab-" + tab_name).classList.add("active")
+
+def listen(el_id, event, fn):
+    p = create_proxy(fn); _proxies.append(p)
+    gid(el_id).addEventListener(event, p)
+
+# ---------------- Boot ----------------
+async def main():
+    global MATERIALS, selected_ids
+    text = document.getElementById("materials-data").textContent
+    MATERIALS = json.loads(text)
+
+    gid("catFilter").innerHTML = "".join(f"<option>{esc(c)}</option>" for c in ["All"] + get_categories())
+    gid("sidebarSources").innerHTML = ("<br>".join(
+        f'• <a href="{s["url"]}" target="_blank">{esc(s["name"])}</a>' for s in DATA_SOURCES[:4])
+        + '<br><span class="caption">See Data Sources tab for full list.</span>')
+    gid("subHeader").innerHTML = (f"Engineering Materials Thermodynamic Property Explorer — "
+        f"<strong>{len(MATERIALS)}</strong> materials across <strong>{len(get_categories())}</strong> categories")
+    gid("nptsVal").textContent = gid("npoints").value
+    gid("statMaterials").textContent = str(len(MATERIALS))
+    gid("statCategories").textContent = str(len(get_categories()))
+
+    selected_ids = [m["id"] for m in MATERIALS[:3]]
+
+    for cid in ["tmin", "tmax", "rankTemp"]:
+        listen(cid, "input", lambda e: (build_plot(), render_ranking()))
+    listen("rankTemp", "input", render_ranking)
+    listen("npoints", "input", on_npoints)
+    for cid in ["showPhase", "showMolar", "logY", "colorCat"]:
+        listen(cid, "change", build_plot)
+    listen("displayMode", "change", build_plot)
+    listen("unit", "change", on_unit_change)
+    listen("catFilter", "change", on_filter_change)
+    listen("search", "input", on_filter_change)
+    listen("inspectT", "input", render_inspector)
+    listen("dlCsv", "click", download_csv)
+    listen("dlPng", "click", download_png)
+    listen("selAll", "click", select_all)
+    listen("clearSel", "click", clear_sel)
+    listen("presetMetals", "click", lambda e: apply_preset("Metals and alloys"))
+    listen("presetGases", "click", lambda e: apply_preset("Gases"))
+    listen("presetCeramics", "click", lambda e: apply_preset("Ceramics"))
+    listen("presetPolymers", "click", lambda e: apply_preset("Polymers"))
+    listen("presetRandom", "click", lambda e: apply_preset("__random__"))
+    listen("presetReset", "click", lambda e: apply_preset("__reset__"))
+
+    for tab in document.querySelectorAll(".tab"):
+        def make_tab(t):
+            return lambda e: switch_tab(t.dataset.tab, t)
+        p = create_proxy(make_tab(tab)); _proxies.append(p)
+        tab.addEventListener("click", p)
+
+    gid("status").style.display = "none"
+    gid("appRoot").style.display = "flex"
+
+    render_mat_list(); build_plot(); render_ranking(); render_browse(); render_sources()
+
+import asyncio
+asyncio.ensure_future(main())
+</script>
+</body>
+</html>
